@@ -1,7 +1,7 @@
 [build]
-  base = "packages/react-app"
-  command = "npm run build"
-  publish = "dist"
+  # Run the build from the repo root so Netlify CLI paths resolve correctly
+  command = "npm run build --prefix packages/react-app"
+  publish = "packages/react-app/dist"
 
 [[redirects]]
   from = "/*"
