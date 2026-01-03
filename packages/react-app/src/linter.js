@@ -554,7 +554,8 @@ function checkSecurityIssues(code, lines) {
             column: match.index + 1,
             message: message,
             code: errorCode,
-            isSecurity: true
+            isSecurity: true,
+            length: match[0] ? match[0].length : undefined
           });
         }
       }

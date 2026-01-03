@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import CodeEditor from './CodeEditor';
 import SecurityTestPanel from './SecurityTestPanel';
 import './App.css';

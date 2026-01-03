@@ -153,16 +153,18 @@ function CodeEditor({ value, onChange, onRun }) {
 
   const lintMarkerPositions = useMemo(() => {
     const charWidth = 8.4;
+    const underlineOffset = 28; // push underline lower to avoid overlap
     return filteredIssues.map((issue) => {
       const issueLine = lines[issue.line - 1] || '';
       const beforeIssue = issueLine.substring(0, Math.min(issue.column - 1, issueLine.length));
+      const problemLength = Math.max(4, issue.length || issue.code?.length || issue.message?.length || 4);
       return {
         issue,
         key: `${issue.line}-${issue.column}-${issue.code || issue.message}`,
         style: {
-          '--marker-top': `${(issue.line - 1) * 20 + 10}px`,
+          '--marker-top': `${(issue.line - 1) * 20 + underlineOffset}px`,
           '--marker-left': `${10 + (beforeIssue.length * charWidth)}px`,
-          '--marker-width': `${Math.max(4 * charWidth, 20)}px`
+          '--marker-width': `${problemLength * charWidth}px`
         }
       };
     });
