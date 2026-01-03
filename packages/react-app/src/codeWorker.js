@@ -119,14 +119,14 @@ self.onmessage = function(e) {
       TypeError,
       ReferenceError,
       SyntaxError,
-      undefined,
-      null,
-      Infinity,
-      NaN,
       parseInt,
       parseFloat,
       isNaN,
       isFinite,
+      Infinity,
+      NaN,
+      undefined,
+      null: null,
     };
     
     // Wrap code in strict mode IIFE
@@ -137,9 +137,36 @@ self.onmessage = function(e) {
       })();
     `;
     
-    // Execute with limited context
-    const func = new Function(...Object.keys(context), wrappedCode);
-    const result = func(...Object.values(context));
+    // Execute with limited context using a single sandbox argument to avoid reserved identifiers
+    const runner = new Function('sandbox', `
+      "use strict";
+      const console = sandbox.console;
+      const Math = sandbox.Math;
+      const Number = sandbox.Number;
+      const String = sandbox.String;
+      const Array = sandbox.Array;
+      const Object = sandbox.Object;
+      const Date = sandbox.Date;
+      const JSON = sandbox.JSON;
+      const RegExp = sandbox.RegExp;
+      const Boolean = sandbox.Boolean;
+      const Error = sandbox.Error;
+      const TypeError = sandbox.TypeError;
+      const ReferenceError = sandbox.ReferenceError;
+      const SyntaxError = sandbox.SyntaxError;
+      const parseInt = sandbox.parseInt;
+      const parseFloat = sandbox.parseFloat;
+      const isNaN = sandbox.isNaN;
+      const isFinite = sandbox.isFinite;
+      const Infinity = sandbox.Infinity;
+      const NaN = sandbox.NaN;
+      
+      return (function() {
+        ${code}
+      })();
+    `);
+    
+    const result = runner(context);
     
     clearTimeout(timeoutId);
     

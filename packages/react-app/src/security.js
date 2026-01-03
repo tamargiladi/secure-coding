@@ -177,7 +177,6 @@ const DANGEROUS_FUNCTIONS = [
   'navigator',
   'location',
   'history',
-  'console',
   'atob',
   'btoa',
 ];
@@ -213,7 +212,8 @@ export function validateCode(code) {
   }
   
   // Check for dangerous patterns
-  DANGEROUS_PATTERNS.forEach((pattern, index) => {
+  DANGEROUS_PATTERNS.forEach((pattern) => {
+    pattern.lastIndex = 0; // Reset global regex state between runs
     if (pattern.test(code)) {
       errors.push(`Dangerous pattern detected: ${pattern.toString()}`);
     }
@@ -333,11 +333,6 @@ export function createSecureContext() {
     // Safe Boolean
     Boolean: Boolean,
     
-    // Safe undefined and null
-    undefined: undefined,
-    null: null,
-    
-    // Infinity and NaN
     Infinity: Infinity,
     NaN: NaN,
   };
@@ -374,12 +369,38 @@ export function executeSecureCode(code, timeout = 5000) {
         })();
       `;
       
-      // Create function with limited scope
-      const func = new Function(...Object.keys(context), wrappedCode);
+      // Create function with limited scope using a single sandbox argument
+      const runner = new Function('sandbox', `
+        "use strict";
+        const console = sandbox.console;
+        const Math = sandbox.Math;
+        const Number = sandbox.Number;
+        const String = sandbox.String;
+        const Array = sandbox.Array;
+        const Object = sandbox.Object;
+        const Date = sandbox.Date;
+        const JSON = sandbox.JSON;
+        const RegExp = sandbox.RegExp;
+        const Boolean = sandbox.Boolean;
+        const Error = sandbox.Error;
+        const TypeError = sandbox.TypeError;
+        const ReferenceError = sandbox.ReferenceError;
+        const SyntaxError = sandbox.SyntaxError;
+        const parseInt = sandbox.parseInt;
+        const parseFloat = sandbox.parseFloat;
+        const isNaN = sandbox.isNaN;
+        const isFinite = sandbox.isFinite;
+        const Infinity = sandbox.Infinity;
+        const NaN = sandbox.NaN;
+        
+        return (function() {
+          ${code}
+        })();
+      `);
       
       // Execute with timeout
       const startTime = Date.now();
-      const result = func(...Object.values(context));
+      const result = runner(context);
       const executionTime = Date.now() - startTime;
       
       clearTimeout(timeoutId);
