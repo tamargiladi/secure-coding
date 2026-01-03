@@ -6,3 +6,4 @@ build/
 .env.local
 .DS_Store
 *.d.ts
+packages/react-app/node_modules/.vite/deps/_metadata.json
