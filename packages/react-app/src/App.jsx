@@ -4,6 +4,7 @@ import SecurityTestPanel from './SecurityTestPanel';
 import './App.css';
 import { useCallback } from 'react';
 import { validateCode, sanitizeCode, sanitizeOutput, executeSecureCode } from './security';
+import { formatCode } from './formatter';
 import rateLimiter from './rateLimiter';
 
 function App() {
@@ -179,6 +180,16 @@ console.log(greet('User'));`);
     }
   };
 
+  const handlePrettify = () => {
+    try {
+      const formatted = formatCode(code);
+      setCode(formatted);
+      setOutput(sanitizeOutput('(Formatted code)'));
+    } catch (error) {
+      setOutput(sanitizeOutput(`Format error: ${error.message}`));
+    }
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -192,6 +203,13 @@ console.log(greet('User'));`);
           disabled={isExecuting}
         >
           {isExecuting ? 'Executing...' : 'Run Code (Ctrl/Cmd + Enter)'}
+        </button>
+        <button 
+          onClick={handlePrettify}
+          className="prettify-button"
+          disabled={isExecuting}
+        >
+          Prettify
         </button>
         <button 
           onClick={() => setShowTestPanel(!showTestPanel)}

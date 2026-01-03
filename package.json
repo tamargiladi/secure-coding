@@ -4,7 +4,10 @@
     "description":  "",
     "main":  "index.js",
     "scripts":  {
-                    "test":  "echo \"Error: no test specified\" \u0026\u0026 exit 1"
+                    "test":  "echo \"Error: no test specified\" \u0026\u0026 exit 1",
+                    "deploy:prod": "npm run build --prefix packages/react-app \u0026\u0026 netlify deploy --prod --dir packages/react-app/dist",
+                    "deploy:stg": "npm run build --prefix packages/react-app \u0026\u0026 netlify deploy --dir packages/react-app/dist"
+
                 },
     "keywords":  [
 

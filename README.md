@@ -13,5 +13,9 @@ This is a monorepo for an educational project.
 
 The React app will be available at http://localhost:5173/
 
+## Live Demo
+
+Production site: https://protected-code.netlify.app/
+
 ### Attached example of how the editor looks like
 ![alt text](image.png)

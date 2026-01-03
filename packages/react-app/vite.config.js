@@ -24,7 +24,8 @@ export default defineConfig({
       output: {
         // Prevent code injection through chunk names
         sanitizeFileName: (name) => {
-          return name.replace(/[^a-zA-Z0-9_-]/g, '_');
+          // Keep dots so file extensions remain intact
+          return name.replace(/[^a-zA-Z0-9._-]/g, '_');
         }
       }
     }

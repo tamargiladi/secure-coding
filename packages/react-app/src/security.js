@@ -133,9 +133,6 @@ const DANGEROUS_PATTERNS = [
   /\\u[0-9a-f]{4}/gi,
   /\\x[0-9a-f]{2}/gi,
   
-  // Comments that might hide code
-  /\/\*[\s\S]*?\*\//g,
-  /\/\/.*$/gm,
 ];
 
 // Additional dangerous function names

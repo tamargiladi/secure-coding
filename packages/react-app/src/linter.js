@@ -296,15 +296,24 @@ function checkCommonIssues(code, lines) {
       });
     }
     
-    // Check for console.log in production code (optional warning)
+    // Check for console.log in production code (optional warning).
+    // Allow simple logging of primitive literals only (string/number/boolean/null/undefined); warn otherwise.
     if (trimmed.includes('console.log') && !trimmed.startsWith('//')) {
-      issues.push({
-        type: LINT_TYPES.INFO,
-        line: lineNum,
-        column: line.indexOf('console.log') + 1,
-        message: "Consider removing console.log in production code",
-        code: 'CONSOLE_LOG'
-      });
+      const callMatch = trimmed.match(/console\.log\s*\((.*)\)/);
+      const args = callMatch ? callMatch[1] : '';
+      const primitiveLiteral = `(?:["'\`][\\s\\S]*?["'\`]|-?\\d+(?:\\.\\d+)?(?:e[+-]?\\d+)?|true|false|null|undefined)`;
+      const simpleArgsPattern = new RegExp(`^\\s*${primitiveLiteral}(\\s*,\\s*${primitiveLiteral})*\\s*$`, 'i');
+      const isSimpleLog = args === '' || simpleArgsPattern.test(args);
+      
+      if (!isSimpleLog) {
+        issues.push({
+          type: LINT_TYPES.INFO,
+          line: lineNum,
+          column: line.indexOf('console.log') + 1,
+          message: "Consider removing console.log in production code",
+          code: 'CONSOLE_LOG'
+        });
+      }
     }
     
     // Check for missing semicolons (optional)
