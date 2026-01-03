@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JavaScript Code Editor</title>
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval';
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: https:;
+      font-src 'self' data:;
+      connect-src 'self';
+      worker-src 'self' blob:;
+      frame-ancestors 'none';
+      base-uri 'self';
+      form-action 'self';
+      upgrade-insecure-requests;
+    " />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Permissions-Policy" content="
+      geolocation=(),
+      microphone=(),
+      camera=(),
+      payment=(),
+      usb=(),
+      magnetometer=(),
+      gyroscope=(),
+      accelerometer=()
+    " />
+    
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Organic background shapes -->
+    <div class="background-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+    </div>
+    
+    <div class="App">
+      <header class="App-header">
+        <div class="header-content">
+          <h1 class="hero-title">
+            <span class="title-gradient">Code Editor</span>
+            <span class="title-subtitle">JavaScript Playground</span>
+          </h1>
+          <div class="security-badge">
+            <span class="badge-icon">🔒</span>
+            <span>Secure Execution Environment</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="button-group" role="toolbar" aria-label="Editor actions">
+        <button id="runButton" class="run-button" aria-label="Run code" title="Run code (Ctrl/Cmd + Enter)">
+          Run Code (Ctrl/Cmd + Enter)
+        </button>
+        <button id="testPanelToggle" class="test-panel-toggle" aria-label="Toggle test examples panel" aria-expanded="false">
+          Show Test Examples
+        </button>
+      </div>
+      
+      <div id="securityWarnings" class="security-warnings" style="display: none;">
+        <h4>⚠️ Security Warnings:</h4>
+        <ul id="securityWarningsList"></ul>
+      </div>
+      
+      <div id="testPanel" class="security-test-panel" style="display: none;"></div>
+      
+      <div id="codeEditorContainer" class="code-editor-container" role="application" aria-label="Code editor">
+        <div id="lineNumbers" class="line-numbers" role="presentation" aria-hidden="true"></div>
+        <div class="editor-wrapper">
+          <pre id="codeHighlight" class="code-highlight" aria-hidden="true"></pre>
+          <textarea
+            id="codeEditor"
+            class="code-editor"
+            spellcheck="false"
+            placeholder="// Write your JavaScript code here..."
+            aria-label="Code editor textarea"
+            aria-describedby="editor-help"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+          ></textarea>
+          <div id="lintMarkers" class="lint-markers" aria-hidden="true"></div>
+        </div>
+        <div id="editor-help" class="sr-only">JavaScript code editor with syntax highlighting and linting</div>
+      </div>
+      
+      <div id="resultContainer" class="result-container" style="display: none;">
+        <h3>Result:</h3>
+        <pre id="resultOutput"></pre>
+      </div>
+      
+      <div class="output-container">
+        <h3>Output:</h3>
+        <pre id="outputText">(No output)</pre>
+      </div>
+      
+      <div id="lintPanel" class="lint-panel" style="display: none;">
+        <div class="lint-panel-header">
+          <div class="lint-header-top">
+            <span id="lintCount" class="lint-count"></span>
+          </div>
+          <div class="lint-filters">
+            <button class="lint-filter-btn active filter-error" data-filter="errors">
+              <span class="filter-icon">●</span> Errors (0)
+            </button>
+            <button class="lint-filter-btn active filter-warning" data-filter="warnings">
+              <span class="filter-icon">●</span> Warnings (0)
+            </button>
+            <button class="lint-filter-btn active filter-info" data-filter="info">
+              <span class="filter-icon">●</span> Info (0)
+            </button>
+            <button class="lint-filter-btn active filter-security" data-filter="security">
+              <span class="filter-icon">🔒</span> Security (0)
+            </button>
+          </div>
+        </div>
+        <div id="lintIssuesList" class="lint-issues-list"></div>
+      </div>
+    </div>
+    
+    <script type="module" src="editor.js"></script>
+  </body>
+</html>
+
