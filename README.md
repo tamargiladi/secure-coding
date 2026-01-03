@@ -12,3 +12,6 @@ This is a monorepo for an educational project.
 2. Start the React app: `cd packages/react-app && npm run dev`
 
 The React app will be available at http://localhost:5173/
+
+### Attached example of how the editor looks like
+![alt text](image.png)

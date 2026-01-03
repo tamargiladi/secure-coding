@@ -34,9 +34,54 @@
       gyroscope=(),
       accelerometer=()
     " />
+    <style>
+      .pre-app-loader {
+        min-height: 100vh;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+        margin: 0;
+        background: radial-gradient(circle at 10% 20%, rgba(255, 90, 196, 0.12) 0, transparent 35%),
+                    radial-gradient(circle at 80% 0%, rgba(0, 200, 117, 0.12) 0, transparent 30%),
+                    linear-gradient(135deg, #0a1020 0%, #0c1628 35%, #0b1222 100%);
+        color: #e6eeff;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .pre-app-spinner {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        border: 6px solid rgba(255, 255, 255, 0.12);
+        border-top-color: #0073ea;
+        border-right-color: #ff5ac4;
+        border-left-color: #00c875;
+        box-shadow: 0 14px 30px rgba(0, 115, 234, 0.32);
+        animation: pre-rotate 1s linear infinite;
+      }
+
+      .pre-app-text {
+        font-size: 15px;
+        letter-spacing: 0.2px;
+        opacity: 0.88;
+        text-align: center;
+      }
+
+      @keyframes pre-rotate {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="pre-app-loader">
+        <div class="pre-app-spinner" aria-hidden="true"></div>
+        <p class="pre-app-text">Loading the secure editor...</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
