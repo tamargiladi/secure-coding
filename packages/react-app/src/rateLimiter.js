@@ -8,6 +8,7 @@ class RateLimiter {
     this.maxRequests = maxRequests;
     this.windowMs = windowMs;
     this.requests = new Map(); // Map of IP/token -> request timestamps
+    this.cleanupTimer = null;
   }
 
   /**
@@ -68,15 +69,31 @@ class RateLimiter {
       }
     }
   }
+
+  /**
+   * Start periodic cleanup to prevent memory bloat.
+   * @param {number} intervalMs - Interval for cleanup checks.
+   */
+  startCleanup(intervalMs = 5 * 60 * 1000) {
+    if (this.cleanupTimer) return;
+    this.cleanupTimer = setInterval(() => this.cleanup(), intervalMs);
+  }
+
+  /**
+   * Stop periodic cleanup (e.g., on unmount).
+   */
+  stopCleanup() {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+  }
 }
 
 // Create a singleton instance
 const rateLimiter = new RateLimiter(10, 60000); // 10 requests per minute
 
-// Cleanup every 5 minutes
-setInterval(() => {
-  rateLimiter.cleanup();
-}, 5 * 60 * 1000);
+// Begin cleanup loop immediately for the shared instance
+rateLimiter.startCleanup();
 
 export default rateLimiter;
-

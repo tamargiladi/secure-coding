@@ -1,8 +1,7 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import CodeEditor from './CodeEditor';
 import SecurityTestPanel from './SecurityTestPanel';
 import './App.css';
-import { useCallback } from 'react';
 import { validateCode, sanitizeCode, sanitizeOutput, executeSecureCode } from './security';
 import { formatCode } from './formatter';
 import rateLimiter from './rateLimiter';
@@ -23,13 +22,18 @@ console.log(greet('User'));`);
   const [showTestPanel, setShowTestPanel] = useState(false);
   const workerRef = useRef(null);
   const executionTimeoutRef = useRef(null);
+  const userIdentifierRef = useRef(
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? `user-${crypto.randomUUID()}`
+      : `user-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
 
-  const clearExecutionTimeout = () => {
+  const clearExecutionTimeout = useCallback(() => {
     if (executionTimeoutRef.current) {
       clearTimeout(executionTimeoutRef.current);
       executionTimeoutRef.current = null;
     }
-  };
+  }, []);
 
   const initializeWorker = useCallback(() => {
     try {
@@ -68,9 +72,8 @@ console.log(greet('User'));`);
       console.warn('Web Worker not available, falling back to secure execution:', error);
       workerRef.current = null;
     }
-  }, []);
+  }, [clearExecutionTimeout]);
 
-  // Initialize Web Worker for secure execution
   useEffect(() => {
     initializeWorker();
     
@@ -80,9 +83,9 @@ console.log(greet('User'));`);
       }
       clearExecutionTimeout();
     };
-  }, [initializeWorker]);
+  }, [initializeWorker, clearExecutionTimeout]);
 
-  const runCode = async () => {
+  const runCode = useCallback(async () => {
     if (isExecuting) return;
     setOutput('');
     setResult('');
@@ -91,8 +94,7 @@ console.log(greet('User'));`);
     clearExecutionTimeout();
     
     try {
-      // Step 0: Rate limiting check
-      const userIdentifier = 'user'; // In production, use actual user ID or IP
+      const userIdentifier = userIdentifierRef.current;
       if (!rateLimiter.isAllowed(userIdentifier)) {
         const remaining = rateLimiter.getRemaining(userIdentifier);
         setOutput(sanitizeOutput(`Rate limit exceeded. Please wait before running code again. Remaining requests: ${remaining}`));
@@ -102,7 +104,6 @@ console.log(greet('User'));`);
         return;
       }
       
-      // Step 1: Validate code for dangerous patterns
       const validation = validateCode(code);
       
       if (!validation.valid) {
@@ -113,20 +114,21 @@ console.log(greet('User'));`);
         return;
       }
       
-      // Show warnings if any
       if (validation.warnings.length > 0) {
         setSecurityWarnings(validation.warnings);
       }
       
-      // Step 2: Sanitize code
       const sanitizedCode = sanitizeCode(code);
 
-      // Helper: fallback secure execution if worker hangs
       const fallbackExecute = async () => {
         try {
           const executionResult = await executeSecureCode(sanitizedCode, 5000);
           setResult(executionResult.result ? sanitizeOutput(String(executionResult.result)) : '');
-          setOutput('(No output)');
+          setOutput(
+            executionResult.output
+              ? sanitizeOutput(String(executionResult.output))
+              : '(No output)'
+          );
           if (executionResult.warnings && executionResult.warnings.length > 0) {
             setSecurityWarnings(prev => [...prev, ...executionResult.warnings]);
           }
@@ -139,7 +141,6 @@ console.log(greet('User'));`);
         }
       };
 
-      // Fail-safe timeout in case worker hangs
       executionTimeoutRef.current = setTimeout(() => {
         if (workerRef.current) {
           workerRef.current.terminate();
@@ -149,8 +150,6 @@ console.log(greet('User'));`);
         fallbackExecute();
       }, 6500);
       
-      // Step 3: Execute code securely
-      // Try Web Worker first (more secure), fallback to secure execution
       if (!workerRef.current) {
         initializeWorker();
       }
@@ -169,7 +168,6 @@ console.log(greet('User'));`);
           workerRef.current = null;
         }
       } else {
-        // Fallback to secure execution without worker
         await fallbackExecute();
       }
     } catch (error) {
@@ -178,9 +176,9 @@ console.log(greet('User'));`);
       setOutput(sanitizeOutput(`Error: ${error.message}`));
       setResult('');
     }
-  };
+  }, [code, initializeWorker, isExecuting, clearExecutionTimeout]);
 
-  const handlePrettify = () => {
+  const handlePrettify = useCallback(() => {
     try {
       const formatted = formatCode(code);
       setCode(formatted);
@@ -188,7 +186,11 @@ console.log(greet('User'));`);
     } catch (error) {
       setOutput(sanitizeOutput(`Format error: ${error.message}`));
     }
-  };
+  }, [code]);
+
+  const handleToggleTestPanel = useCallback(() => {
+    setShowTestPanel(prev => !prev);
+  }, []);
 
   return (
     <div className="App">
@@ -212,7 +214,7 @@ console.log(greet('User'));`);
           Prettify
         </button>
         <button 
-          onClick={() => setShowTestPanel(!showTestPanel)}
+          onClick={handleToggleTestPanel}
           className="test-panel-toggle"
         >
           {showTestPanel ? 'Hide' : 'Show'} Test Examples
@@ -228,7 +230,7 @@ console.log(greet('User'));`);
           <h4>⚠️ Security Warnings:</h4>
           <ul>
             {securityWarnings.map((warning, index) => (
-              <li key={index}>{sanitizeOutput(warning)}</li>
+              <li key={`${index}-${warning}`}>{sanitizeOutput(warning)}</li>
             ))}
           </ul>
         </div>

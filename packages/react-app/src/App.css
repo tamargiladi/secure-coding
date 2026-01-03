@@ -109,6 +109,7 @@
 }
 
 .run-button:hover,
+.prettify-button:hover,
 .test-panel-toggle:hover {
   transform: translateY(-1px) scale(1.01);
   filter: brightness(1.05);
@@ -116,12 +117,20 @@
 }
 
 .run-button:active,
+.prettify-button:active,
 .test-panel-toggle:active {
   transform: translateY(0);
 }
 
 .run-button:disabled {
   background: linear-gradient(120deg, #3a4a63, #2f3a4e);
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.prettify-button:disabled {
+  background: linear-gradient(120deg, #3f3f46, #3730a3);
   opacity: 0.65;
   cursor: not-allowed;
   box-shadow: none;

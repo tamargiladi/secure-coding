@@ -179,22 +179,16 @@ const DANGEROUS_FUNCTIONS = [
 ];
 
 /**
- * Sanitizes code by removing dangerous patterns
+ * Sanitizes code by normalizing and removing null bytes only.
+ * Does not mutate user intent; validation handles blocking unsafe patterns.
  */
 export function sanitizeCode(code) {
   if (!code || typeof code !== 'string') {
     return '';
   }
 
-  // Remove null bytes
-  let sanitized = code.replace(/\0/g, '');
-  
-  // Remove dangerous patterns
-  DANGEROUS_PATTERNS.forEach(pattern => {
-    sanitized = sanitized.replace(pattern, '');
-  });
-  
-  return sanitized;
+  // Remove null bytes but leave the original content intact
+  return code.replace(/\0/g, '');
 }
 
 /**
@@ -338,78 +332,79 @@ export function createSecureContext() {
 }
 
 /**
- * Executes code in a secure sandboxed environment
+ * Executes code using the dedicated worker to keep the main thread safe.
  */
 export function executeSecureCode(code, timeout = 5000) {
+  const validation = validateCode(code);
+  if (!validation.valid) {
+    return Promise.reject(new Error(`Code validation failed: ${validation.errors.join(', ')}`));
+  }
+
+  const resolvedTimeout = Math.max(0, timeout);
+
   return new Promise((resolve, reject) => {
-    // Validate code first
-    const validation = validateCode(code);
-    if (!validation.valid) {
-      reject(new Error(`Code validation failed: ${validation.errors.join(', ')}`));
+    let worker;
+    try {
+      worker = new Worker(new URL('./codeWorker.js', import.meta.url), { type: 'module' });
+    } catch (error) {
+      reject(new Error(`Secure worker not available: ${error.message}`));
       return;
     }
-    
-    // Create timeout
-    const timeoutId = setTimeout(() => {
+
+    let settled = false;
+    const cleanup = () => {
+      if (worker) {
+        worker.terminate();
+        worker = null;
+      }
+    };
+
+    const timerId = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
       reject(new Error('Code execution timeout exceeded'));
-    }, timeout);
-    
-    try {
-      // Create secure context
-      const context = createSecureContext();
-      
-      // Wrap code in IIFE to isolate scope
-      const wrappedCode = `
-        (function() {
-          "use strict";
-          ${code}
-        })();
-      `;
-      
-      // Create function with limited scope using a single sandbox argument
-      const runner = new Function('sandbox', `
-        "use strict";
-        const console = sandbox.console;
-        const Math = sandbox.Math;
-        const Number = sandbox.Number;
-        const String = sandbox.String;
-        const Array = sandbox.Array;
-        const Object = sandbox.Object;
-        const Date = sandbox.Date;
-        const JSON = sandbox.JSON;
-        const RegExp = sandbox.RegExp;
-        const Boolean = sandbox.Boolean;
-        const Error = sandbox.Error;
-        const TypeError = sandbox.TypeError;
-        const ReferenceError = sandbox.ReferenceError;
-        const SyntaxError = sandbox.SyntaxError;
-        const parseInt = sandbox.parseInt;
-        const parseFloat = sandbox.parseFloat;
-        const isNaN = sandbox.isNaN;
-        const isFinite = sandbox.isFinite;
-        const Infinity = sandbox.Infinity;
-        const NaN = sandbox.NaN;
-        
-        return (function() {
-          ${code}
-        })();
-      `);
-      
-      // Execute with timeout
-      const startTime = Date.now();
-      const result = runner(context);
-      const executionTime = Date.now() - startTime;
-      
-      clearTimeout(timeoutId);
-      
+    }, resolvedTimeout + 250); // small buffer for termination
+
+    worker.onmessage = (e) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timerId);
+
+      const { result, output, error } = e.data || {};
+      cleanup();
+
+      if (error) {
+        reject(new Error(error));
+        return;
+      }
+
       resolve({
         result,
-        executionTime,
+        output,
         warnings: validation.warnings
       });
+    };
+
+    worker.onerror = (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timerId);
+      cleanup();
+      reject(new Error(`Worker Error: ${err.message}`));
+    };
+
+    try {
+      worker.postMessage({
+        code,
+        timeout: resolvedTimeout
+      });
     } catch (error) {
-      clearTimeout(timeoutId);
-      reject(error);
+      if (settled) return;
+      settled = true;
+      clearTimeout(timerId);
+      cleanup();
+      reject(new Error(`Failed to start worker: ${error.message}`));
     }
   });
 }

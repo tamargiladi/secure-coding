@@ -3,36 +3,28 @@
  * Provides additional isolation from the main thread
  */
 
-// List of allowed safe operations
-const ALLOWED_OPERATIONS = [
-  'console.log',
-  'console.error',
-  'console.warn',
-  'Math',
-  'Number',
-  'String',
-  'Array',
-  'Object',
-  'Date',
-  'JSON',
-  'RegExp',
-  'Boolean',
-  'Error',
-  'TypeError',
-  'ReferenceError',
-  'SyntaxError',
-];
-
 // Dangerous patterns that should be blocked
 const BLOCKED_PATTERNS = [
   /\beval\s*\(/gi,
   /\bFunction\s*\(/gi,
+  /\bglobalThis\b/gi,
+  /\bself\b/gi,
+  /\btop\b/gi,
+  /\bparent\b/gi,
+  /\bframes\b/gi,
   /\bwindow\b/gi,
   /\bdocument\b/gi,
+  /\bnavigator\b/gi,
+  /\blocation\b/gi,
+  /\bhistory\b/gi,
   /\bfetch\s*\(/gi,
   /\bXMLHttpRequest\b/gi,
   /\brequire\s*\(/gi,
   /\bimport\s+/gi,
+  /\bBroadcastChannel\b/gi,
+  /\bMessageChannel\b/gi,
+  /\bSharedArrayBuffer\b/gi,
+  /\bWebAssembly\b/gi,
   /\bpostMessage\s*\(/gi,
   /\bclose\s*\(/gi,
   /\bimportScripts\s*\(/gi,
@@ -41,8 +33,9 @@ const BLOCKED_PATTERNS = [
 self.onmessage = function(e) {
   const { code, timeout } = e.data;
   
-  // Validate code
+  // Validate code (reject rather than mutate)
   for (const pattern of BLOCKED_PATTERNS) {
+    pattern.lastIndex = 0;
     if (pattern.test(code)) {
       self.postMessage({
         error: 'Dangerous code pattern detected',
@@ -53,12 +46,13 @@ self.onmessage = function(e) {
   }
   
   // Set up timeout
+  const resolvedTimeout = Math.max(0, timeout || 5000);
   const timeoutId = setTimeout(() => {
     self.postMessage({
       error: 'Execution timeout exceeded',
       output: ''
     });
-  }, timeout || 5000);
+  }, resolvedTimeout);
   
   // Capture console output
   const logs = [];
@@ -128,14 +122,6 @@ self.onmessage = function(e) {
       undefined,
       null: null,
     };
-    
-    // Wrap code in strict mode IIFE
-    const wrappedCode = `
-      "use strict";
-      (function() {
-        ${code}
-      })();
-    `;
     
     // Execute with limited context using a single sandbox argument to avoid reserved identifiers
     const runner = new Function('sandbox', `

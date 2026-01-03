@@ -214,6 +214,9 @@
   height: 2px;
   pointer-events: auto;
   cursor: help;
+  top: var(--marker-top);
+  left: var(--marker-left);
+  width: var(--marker-width);
 }
 
 .lint-marker.lint-error {
@@ -255,6 +258,7 @@
   border-top: 1px solid #3e3e42;
   overflow-y: auto;
   font-size: 12px;
+  color: #e5e7eb;
 }
 
 .lint-panel-header {
@@ -377,6 +381,7 @@
   border-left: 3px solid transparent;
   cursor: pointer;
   transition: background-color 0.2s;
+  color: #e5e7eb;
 }
 
 .lint-issue:hover {
@@ -414,9 +419,14 @@
 
 .lint-issue-line {
   min-width: 60px;
-  color: #858585;
+  color: #e5e7eb;
+  background: #1b1f2a;
+  border: 1px solid #3e3e42;
+  border-radius: 6px;
+  padding: 4px 8px;
   font-family: 'Courier New', monospace;
   margin-right: 12px;
+  text-align: center;
 }
 
 .lint-issue-message {
@@ -425,11 +435,15 @@
 }
 
 .lint-issue-code {
-  color: #858585;
+  color: #e5e7eb;
+  background: #1b1f2a;
+  border: 1px solid #3e3e42;
+  border-radius: 6px;
+  padding: 4px 8px;
   font-size: 11px;
   font-family: 'Courier New', monospace;
   margin-left: 12px;
-  opacity: 0.7;
+  opacity: 0.9;
 }
 
 .lint-panel::-webkit-scrollbar {

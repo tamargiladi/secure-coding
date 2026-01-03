@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './CodeEditor.css';
 import { highlight } from './syntaxHighlighter';
 import { lint, LINT_TYPES } from './linter';
@@ -7,13 +7,14 @@ function CodeEditor({ value, onChange, onRun }) {
   const textareaRef = useRef(null);
   const highlightRef = useRef(null);
   const lineNumbersRef = useRef(null);
-  const [lineNumbers, setLineNumbers] = useState(['1']);
   const [filters, setFilters] = useState({
     errors: true,
     warnings: true,
     info: true,
     security: true
   });
+
+  const lines = useMemo(() => value.split('\n'), [value]);
 
   // Generate highlighted HTML
   const highlightedCode = useMemo(() => {
@@ -36,11 +37,7 @@ function CodeEditor({ value, onChange, onRun }) {
     });
   }, [lintIssues, filters]);
 
-  useEffect(() => {
-    const lines = value.split('\n');
-    const numbers = lines.map((_, index) => (index + 1).toString());
-    setLineNumbers(numbers);
-  }, [value]);
+  const lineNumbers = useMemo(() => lines.map((_, index) => (index + 1).toString()), [lines]);
 
   // Sync scroll between textarea and highlight overlay
   useEffect(() => {
@@ -62,7 +59,7 @@ function CodeEditor({ value, onChange, onRun }) {
     return () => textarea.removeEventListener('scroll', syncScroll);
   }, []);
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = useCallback((e) => {
     if (e.key === 'Tab') {
       e.preventDefault();
       const textarea = textareaRef.current;
@@ -80,9 +77,9 @@ function CodeEditor({ value, onChange, onRun }) {
       e.preventDefault();
       onRun();
     }
-  };
+  }, [onChange, onRun, value]);
 
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     const textarea = textareaRef.current;
     const highlight = highlightRef.current;
     const lineNumbers = lineNumbersRef.current;
@@ -94,7 +91,7 @@ function CodeEditor({ value, onChange, onRun }) {
     if (lineNumbers) {
       lineNumbers.scrollTop = textarea.scrollTop;
     }
-  };
+  }, []);
 
   // Get issues for a specific line (using filtered issues for display)
   const getLineIssues = (lineNum) => {
@@ -122,19 +119,61 @@ function CodeEditor({ value, onChange, onRun }) {
   };
 
   // Toggle filter
-  const toggleFilter = (filterType) => {
+  const toggleFilter = useCallback((filterType) => {
     setFilters(prev => ({
       ...prev,
       [filterType]: !prev[filterType]
     }));
-  };
+  }, []);
+
+  const handleToggleErrors = useCallback(() => toggleFilter('errors'), [toggleFilter]);
+  const handleToggleWarnings = useCallback(() => toggleFilter('warnings'), [toggleFilter]);
+  const handleToggleInfo = useCallback(() => toggleFilter('info'), [toggleFilter]);
+  const handleToggleSecurity = useCallback(() => toggleFilter('security'), [toggleFilter]);
+
+  const handleChange = useCallback(
+    (e) => onChange(e.target.value),
+    [onChange]
+  );
+
+  const handleIssueClick = useCallback(
+    (issue) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      const lineStart = lines.slice(0, issue.line - 1).join('\n').length + (issue.line > 1 ? 1 : 0);
+      textarea.focus();
+      textarea.setSelectionRange(lineStart, lineStart);
+      const lineHeight = 20;
+      const containerHeight = textarea.clientHeight;
+      const scrollTop = Math.max(0, (issue.line - 1) * lineHeight - containerHeight / 2);
+      textarea.scrollTop = scrollTop;
+    },
+    [lines]
+  );
+
+  const lintMarkerPositions = useMemo(() => {
+    const charWidth = 8.4;
+    return filteredIssues.map((issue) => {
+      const issueLine = lines[issue.line - 1] || '';
+      const beforeIssue = issueLine.substring(0, Math.min(issue.column - 1, issueLine.length));
+      return {
+        issue,
+        key: `${issue.line}-${issue.column}-${issue.code || issue.message}`,
+        style: {
+          '--marker-top': `${(issue.line - 1) * 20 + 10}px`,
+          '--marker-left': `${10 + (beforeIssue.length * charWidth)}px`,
+          '--marker-width': `${Math.max(4 * charWidth, 20)}px`
+        }
+      };
+    });
+  }, [filteredIssues, lines]);
 
   return (
     <div className="code-editor-container">
       <div className="code-editor-main">
         <div ref={lineNumbersRef} className="line-numbers">
-          {lineNumbers.map((num, index) => {
-            const lineNum = index + 1;
+          {lineNumbers.map((num) => {
+            const lineNum = Number(num);
             const issueType = getLineIssueType(lineNum);
             const issues = getLineIssues(lineNum);
             const issueTitle = issues.length > 0 
@@ -144,7 +183,7 @@ function CodeEditor({ value, onChange, onRun }) {
             const isSecurity = hasSecurityError(lineNum);
             return (
               <div 
-                key={index} 
+                key={`line-${lineNum}`} 
                 className={`line-number ${issueType ? `line-${issueType}` : ''} ${isSecurity ? 'security-error' : ''}`}
                 title={issueTitle}
               >
@@ -163,7 +202,7 @@ function CodeEditor({ value, onChange, onRun }) {
           ref={textareaRef}
           className="code-editor"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           onScroll={handleScroll}
           spellCheck={false}
@@ -171,26 +210,14 @@ function CodeEditor({ value, onChange, onRun }) {
         />
         {/* Linting error markers */}
         <div className="lint-markers">
-          {filteredIssues.map((issue, index) => {
-            const lines = value.split('\n');
-            const issueLine = lines[issue.line - 1] || '';
-            const beforeIssue = issueLine.substring(0, Math.min(issue.column - 1, issueLine.length));
-            // Approximate character width (monospace font)
-            const charWidth = 8.4;
-            
-            return (
-              <div
-                key={index}
-                className={`lint-marker lint-${issue.type} ${issue.isSecurity ? 'security-error' : ''}`}
-                style={{
-                  top: `${(issue.line - 1) * 20 + 10}px`,
-                  left: `${10 + (beforeIssue.length * charWidth)}px`,
-                  width: `${Math.max(4 * charWidth, 20)}px`
-                }}
-                title={issue.message}
-              />
-            );
-          })}
+          {lintMarkerPositions.map(({ issue, key, style }) => (
+            <div
+              key={key}
+              className={`lint-marker lint-${issue.type} ${issue.isSecurity ? 'security-error' : ''}`}
+              style={style}
+              title={issue.message}
+            />
+          ))}
         </div>
       </div>
       </div>
@@ -217,28 +244,28 @@ function CodeEditor({ value, onChange, onRun }) {
             <div className="lint-filters">
               <button
                 className={`lint-filter-btn ${filters.errors ? 'active' : ''} filter-error`}
-                onClick={() => toggleFilter('errors')}
+                onClick={handleToggleErrors}
                 title="Toggle error display"
               >
                 <span className="filter-icon">●</span> Errors ({lintIssues.filter(i => i.type === LINT_TYPES.ERROR).length})
               </button>
               <button
                 className={`lint-filter-btn ${filters.warnings ? 'active' : ''} filter-warning`}
-                onClick={() => toggleFilter('warnings')}
+                onClick={handleToggleWarnings}
                 title="Toggle warning display"
               >
                 <span className="filter-icon">●</span> Warnings ({lintIssues.filter(i => i.type === LINT_TYPES.WARNING).length})
               </button>
               <button
                 className={`lint-filter-btn ${filters.info ? 'active' : ''} filter-info`}
-                onClick={() => toggleFilter('info')}
+                onClick={handleToggleInfo}
                 title="Toggle info display"
               >
                 <span className="filter-icon">●</span> Info ({lintIssues.filter(i => i.type === LINT_TYPES.INFO).length})
               </button>
               <button
                 className={`lint-filter-btn ${filters.security ? 'active' : ''} filter-security`}
-                onClick={() => toggleFilter('security')}
+                onClick={handleToggleSecurity}
                 title="Toggle security errors display"
               >
                 <span className="filter-icon">🔒</span> Security ({lintIssues.filter(i => i.isSecurity).length})
@@ -247,28 +274,17 @@ function CodeEditor({ value, onChange, onRun }) {
           </div>
           <div className="lint-issues-list">
             {filteredIssues.length > 0 ? (
-              filteredIssues.map((issue, index) => (
-              <div 
-                key={index} 
+              filteredIssues.map((issue) => (
+              <button
+                key={`${issue.line}-${issue.column}-${issue.code || issue.message}`}
+                type="button"
                 className={`lint-issue lint-issue-${issue.type} ${issue.isSecurity ? 'security-error' : ''}`}
-                onClick={() => {
-                  // Scroll to the line with the issue
-                  const textarea = textareaRef.current;
-                  const lines = value.split('\n');
-                  const lineStart = lines.slice(0, issue.line - 1).join('\n').length + (issue.line > 1 ? 1 : 0);
-                  textarea.focus();
-                  textarea.setSelectionRange(lineStart, lineStart);
-                  // Scroll into view
-                  const lineHeight = 20;
-                  const containerHeight = textarea.clientHeight;
-                  const scrollTop = Math.max(0, (issue.line - 1) * lineHeight - containerHeight / 2);
-                  textarea.scrollTop = scrollTop;
-                }}
+                onClick={() => handleIssueClick(issue)}
               >
                 <span className="lint-issue-line">{issue.line}:{issue.column}</span>
                 <span className="lint-issue-message">{issue.message}</span>
                 <span className="lint-issue-code">{issue.code}</span>
-              </div>
+              </button>
               ))
             ) : (
               <div className="lint-no-results">
@@ -282,5 +298,5 @@ function CodeEditor({ value, onChange, onRun }) {
   );
 }
 
-export default CodeEditor;
+export default memo(CodeEditor);
 

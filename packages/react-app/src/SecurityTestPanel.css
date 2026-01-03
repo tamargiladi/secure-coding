@@ -6,6 +6,7 @@
   border: 1px solid #dee2e6;
   border-radius: 4px;
   box-sizing: border-box;
+  color: #1f2937;
 }
 
 .test-panel-header {
@@ -31,6 +32,7 @@
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s;
+  color: #1f2937;
 }
 
 .test-tabs button:hover {
@@ -57,6 +59,7 @@
   border: 1px solid #dee2e6;
   border-radius: 4px;
   transition: all 0.2s;
+  color: #1f2937;
 }
 
 .test-example:hover {
@@ -119,5 +122,6 @@
   overflow-x: auto;
   max-height: 100px;
   overflow-y: auto;
+  color: #0f172a;
 }
 
